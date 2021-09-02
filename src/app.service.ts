@@ -10,12 +10,12 @@ import { DBService, UserWithGamebooks } from './db.service';
 
 @Injectable()
 export class AppService {
-  constructor(private readonly DBService: DBService) {}
+  constructor(private readonly dBService: DBService) {}
 
   async userCreatedHandler(
     data: UserCreatedEvent['data'],
   ): Promise<UserWithGamebooks> {
-    const { fullName, id, email, version } = data;
+    const { fullName, id, email, version, roles } = data;
 
     if (!email) {
       throw new Error('Missing Email');
@@ -32,10 +32,11 @@ export class AppService {
       email: email,
       fullName: fullName,
       version: version,
+      roles: roles,
       library: [],
     };
 
-    this.DBService.users.push({ ...user });
+    this.dBService.users.push({ ...user });
 
     return user;
   }
@@ -43,29 +44,26 @@ export class AppService {
   async userUpdatedHandler(
     data: UserUpdatedEvent['data'],
   ): Promise<UserWithGamebooks> {
-    const { fullName, id, version } = data;
+    const { fullName, id, version, roles } = data;
 
     if (!id) {
       throw new Error('Missing Id');
     }
 
-    const index = this.DBService.users.findIndex(
-      (user) => user.id === id && user.active === true,
-    );
+    const index = this.dBService.users.findIndex((user) => user.id === id);
     if (index === -1)
       throw new BadRequestException('Bad Id in User Update Request');
 
-    const user = { ...this.DBService.users[index] };
+    const user = { ...this.dBService.users[index], fullName, roles };
     if (user.version !== version - 1)
       throw new OutOfOrderEventException(
         UserEventType.USER_UPDATED,
         user.version - 1,
         version,
       );
-
-    user.fullName = fullName;
     user.version = version;
-    this.DBService.users[index] = { ...user };
+
+    this.dBService.users[index] = { ...user };
 
     return user;
   }
